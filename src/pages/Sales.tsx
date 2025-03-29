@@ -1,15 +1,20 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useStore } from '../store';
 import { Receipt, CreditCard, Banknote } from 'lucide-react';
+import { NewSaleModal } from '../components/NewSaleModal';
 
 export function Sales() {
   const { sales } = useStore();
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   return (
     <div>
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold text-gray-900">Sales Records</h1>
-        <button className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600">
+        <button 
+          onClick={() => setIsModalOpen(true)}
+          className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors duration-200"
+        >
           New Sale
         </button>
       </div>
@@ -46,7 +51,7 @@ export function Sales() {
                     <div className="flex items-center">
                       <Receipt className="h-5 w-5 text-gray-400 mr-3" />
                       <div className="text-sm font-medium text-gray-900">
-                        #{sale.id}
+                        #{sale.id.slice(0, 8)}
                       </div>
                     </div>
                   </td>
@@ -63,9 +68,9 @@ export function Sales() {
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
                       {sale.paymentMethod === 'card' ? (
-                        <CreditCard className="h-5 w-5 text-gray-400 mr-2" />
+                        <CreditCard className="h-5 w-5 text-blue-500 mr-2" />
                       ) : (
-                        <Banknote className="h-5 w-5 text-gray-400 mr-2" />
+                        <Banknote className="h-5 w-5 text-green-500 mr-2" />
                       )}
                       <span className="text-sm text-gray-900 capitalize">
                         {sale.paymentMethod}
@@ -74,7 +79,7 @@ export function Sales() {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm font-medium text-gray-900">
-                      ${sale.total}
+                      ${sale.total.toFixed(2)}
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
@@ -94,6 +99,11 @@ export function Sales() {
           </table>
         </div>
       </div>
+
+      <NewSaleModal 
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+      />
     </div>
   );
 }
