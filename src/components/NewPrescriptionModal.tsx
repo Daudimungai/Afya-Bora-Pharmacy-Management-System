@@ -1,180 +1,176 @@
 import React, { useState } from 'react';
-import { X, Plus, Trash2 } from 'lucide-react';
 import { useStore } from '../store';
-import type { Prescription } from '../types';
+import { X, Plus, Minus } from 'lucide-react';
 
 interface NewPrescriptionModalProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
+interface MedicationInput {
+  medicineId: string;
+  dosage: string;
+  frequency: string;
+  duration: string;
+}
+
 export function NewPrescriptionModal({ isOpen, onClose }: NewPrescriptionModalProps) {
-  const { addPrescription, medicines, patients } = useStore();
+  const { medicines, patients, addPrescription } = useStore();
   const [formData, setFormData] = useState({
     patientId: '',
     doctorName: '',
-    medications: [{ medicineId: '', quantity: '', dosage: '' }],
+    notes: '',
   });
+  const [medications, setMedications] = useState<MedicationInput[]>([
+    { medicineId: '', dosage: '', frequency: '', duration: '' },
+  ]);
 
   const handleAddMedication = () => {
-    setFormData({
-      ...formData,
-      medications: [...formData.medications, { medicineId: '', quantity: '', dosage: '' }],
-    });
+    setMedications([
+      ...medications,
+      { medicineId: '', dosage: '', frequency: '', duration: '' },
+    ]);
   };
 
   const handleRemoveMedication = (index: number) => {
-    setFormData({
-      ...formData,
-      medications: formData.medications.filter((_, i) => i !== index),
-    });
+    setMedications(medications.filter((_, i) => i !== index));
   };
 
-  const handleMedicationChange = (index: number, field: string, value: string) => {
-    const newMedications = [...formData.medications];
+  const handleMedicationChange = (index: number, field: keyof MedicationInput, value: string) => {
+    const newMedications = [...medications];
     newMedications[index] = { ...newMedications[index], [field]: value };
-    setFormData({ ...formData, medications: newMedications });
+    setMedications(newMedications);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    const prescription: Prescription = {
-      id: crypto.randomUUID(),
+    addPrescription({
       patientId: formData.patientId,
       doctorName: formData.doctorName,
       date: new Date().toISOString(),
+      medications: medications.filter(med => med.medicineId && med.dosage),
+      notes: formData.notes,
       status: 'pending',
-      medications: formData.medications.map(med => ({
-        medicineId: med.medicineId,
-        quantity: parseInt(med.quantity),
-        dosage: med.dosage,
-      })),
-    };
-
-    addPrescription(prescription);
+    });
+    
     onClose();
     setFormData({
       patientId: '',
       doctorName: '',
-      medications: [{ medicineId: '', quantity: '', dosage: '' }],
+      notes: '',
     });
+    setMedications([{ medicineId: '', dosage: '', frequency: '', duration: '' }]);
   };
 
   if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+      <div className="bg-white rounded-lg p-6 w-full max-w-2xl">
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-bold text-gray-900">New Prescription</h2>
+          <h2 className="text-xl font-bold">New Prescription</h2>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-500"
+            className="text-gray-500 hover:text-gray-700"
           >
-            <X className="h-5 w-5" />
+            <X className="h-6 w-6" />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit}>
-          <div className="space-y-4">
-            <div>
-              <label htmlFor="patientId" className="block text-sm font-medium text-gray-700">
-                Patient
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Patient
+            </label>
+            <select
+              required
+              value={formData.patientId}
+              onChange={(e) => setFormData({ ...formData, patientId: e.target.value })}
+              className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="">Select a patient</option>
+              {patients.map((patient) => (
+                <option key={patient.id} value={patient.id}>
+                  {patient.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Doctor Name
+            </label>
+            <input
+              type="text"
+              required
+              value={formData.doctorName}
+              onChange={(e) => setFormData({ ...formData, doctorName: e.target.value })}
+              className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+
+          <div>
+            <div className="flex justify-between items-center mb-2">
+              <label className="block text-sm font-medium text-gray-700">
+                Medications
               </label>
-              <select
-                id="patientId"
-                required
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                value={formData.patientId}
-                onChange={(e) => setFormData({ ...formData, patientId: e.target.value })}
+              <button
+                type="button"
+                onClick={handleAddMedication}
+                className="text-blue-500 hover:text-blue-600"
               >
-                <option value="">Select a patient</option>
-                {patients.map((patient) => (
-                  <option key={patient.id} value={patient.id}>
-                    {patient.name}
-                  </option>
-                ))}
-              </select>
+                <Plus className="h-5 w-5" />
+              </button>
             </div>
-
-            <div>
-              <label htmlFor="doctorName" className="block text-sm font-medium text-gray-700">
-                Doctor Name
-              </label>
-              <input
-                type="text"
-                id="doctorName"
-                required
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                value={formData.doctorName}
-                onChange={(e) => setFormData({ ...formData, doctorName: e.target.value })}
-              />
-            </div>
-
-            <div>
-              <div className="flex justify-between items-center mb-2">
-                <label className="block text-sm font-medium text-gray-700">
-                  Medications
-                </label>
-                <button
-                  type="button"
-                  onClick={handleAddMedication}
-                  className="inline-flex items-center px-3 py-1 border border-transparent text-sm font-medium rounded-md text-blue-700 bg-blue-100 hover:bg-blue-200"
-                >
-                  <Plus className="h-4 w-4 mr-1" />
-                  Add Medication
-                </button>
-              </div>
-
-              {formData.medications.map((medication, index) => (
-                <div key={index} className="flex gap-4 items-start mt-3 first:mt-0">
-                  <div className="flex-1">
-                    <select
-                      required
-                      className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                      value={medication.medicineId}
-                      onChange={(e) => handleMedicationChange(index, 'medicineId', e.target.value)}
-                    >
-                      <option value="">Select a medicine</option>
-                      {medicines.map((medicine) => (
-                        <option key={medicine.id} value={medicine.id}>
-                          {medicine.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div className="w-24">
-                    <input
-                      type="number"
-                      required
-                      min="1"
-                      placeholder="Qty"
-                      className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                      value={medication.quantity}
-                      onChange={(e) => handleMedicationChange(index, 'quantity', e.target.value)}
-                    />
-                  </div>
-
-                  <div className="flex-1">
-                    <input
-                      type="text"
-                      required
-                      placeholder="Dosage instructions"
-                      className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                      value={medication.dosage}
-                      onChange={(e) => handleMedicationChange(index, 'dosage', e.target.value)}
-                    />
-                  </div>
-
-                  {formData.medications.length > 1 && (
+            <div className="space-y-3">
+              {medications.map((medication, index) => (
+                <div key={index} className="flex gap-2 items-start">
+                  <select
+                    required
+                    value={medication.medicineId}
+                    onChange={(e) => handleMedicationChange(index, 'medicineId', e.target.value)}
+                    className="flex-1 px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">Select medicine</option>
+                    {medicines.map((medicine) => (
+                      <option key={medicine.id} value={medicine.id}>
+                        {medicine.name}
+                      </option>
+                    ))}
+                  </select>
+                  <input
+                    type="text"
+                    placeholder="Dosage"
+                    required
+                    value={medication.dosage}
+                    onChange={(e) => handleMedicationChange(index, 'dosage', e.target.value)}
+                    className="w-24 px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  <input
+                    type="text"
+                    placeholder="Frequency"
+                    required
+                    value={medication.frequency}
+                    onChange={(e) => handleMedicationChange(index, 'frequency', e.target.value)}
+                    className="w-24 px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  <input
+                    type="text"
+                    placeholder="Duration"
+                    required
+                    value={medication.duration}
+                    onChange={(e) => handleMedicationChange(index, 'duration', e.target.value)}
+                    className="w-24 px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  {medications.length > 1 && (
                     <button
                       type="button"
                       onClick={() => handleRemoveMedication(index)}
-                      className="p-2 text-red-600 hover:text-red-700"
+                      className="text-red-500 hover:text-red-600"
                     >
-                      <Trash2 className="h-5 w-5" />
+                      <Minus className="h-5 w-5" />
                     </button>
                   )}
                 </div>
@@ -182,17 +178,29 @@ export function NewPrescriptionModal({ isOpen, onClose }: NewPrescriptionModalPr
             </div>
           </div>
 
-          <div className="mt-6 flex justify-end space-x-3">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Notes
+            </label>
+            <textarea
+              value={formData.notes}
+              onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+              className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              rows={3}
+            />
+          </div>
+
+          <div className="flex justify-end gap-2">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              className="px-4 py-2 border rounded-lg hover:bg-gray-100"
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
             >
               Create Prescription
             </button>
